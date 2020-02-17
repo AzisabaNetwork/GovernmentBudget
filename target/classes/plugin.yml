@@ -1,0 +1,14 @@
+name: GovernmentBudget
+main: net.azisaba.main.budgets.GovernmentBudget
+version: 1.0.0
+author: siloneco
+description: A core plugin in Azisaba LeonGunWar
+api-version: 1.13
+commands:
+  governmentbudget:
+    usage: "/{LABEL}"
+    permission: governmentbudget.command.governmentbudget
+    aliases: ["governmentbudgets", "gbudget", "gbudgets", "gbalance", "gb"]
+permissions:
+  governmentbudget.command.governmentbudget:
+    default: op

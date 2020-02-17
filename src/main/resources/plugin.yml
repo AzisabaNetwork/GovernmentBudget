@@ -1,0 +1,14 @@
+name: ${project.name}
+main: net.azisaba.main.budgets.GovernmentBudget
+version: ${project.version}
+author: siloneco
+description: ${project.description}
+api-version: 1.13
+commands:
+  governmentbudget:
+    usage: "/{LABEL}"
+    permission: governmentbudget.command.governmentbudget
+    aliases: ["governmentbudgets", "gbudget", "gbudgets", "gbalance", "gb"]
+permissions:
+  governmentbudget.command.governmentbudget:
+    default: op
