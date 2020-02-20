@@ -3,6 +3,7 @@ main: net.azisaba.main.budgets.GovernmentBudget
 version: ${project.version}
 author: siloneco
 description: ${project.description}
+depend: ["Vault"]
 api-version: 1.13
 commands:
   governmentbudget:
