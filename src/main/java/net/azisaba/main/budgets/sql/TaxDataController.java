@@ -9,6 +9,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
 
 import net.azisaba.main.budgets.GovernmentBudget;
@@ -113,7 +117,7 @@ public class TaxDataController {
         List<UUID> noDuplicate = new ArrayList<UUID>(new HashSet<>(uuidList));
 
         while ( uuidList.size() > 0 ) {
-            StringBuilder builder = new StringBuilder("update player_and_bank_data set stage = (stage + 1) where uuid in (");
+            StringBuilder builder = new StringBuilder("update '" + dataTableName + "' set stage = (stage + 1) where uuid in (");
 
             List<String> uuidStrList = uuidList.stream()
                     .map(uuid -> "'" + uuid.toString() + "'")
@@ -128,6 +132,25 @@ public class TaxDataController {
             });
         }
 
+        return true;
+    }
+
+    public boolean updatePlayerData(Player p) {
+        double bank = 0;
+        try {
+            bank = GovernmentBudget.getEconomy().getBalance(p);
+        } catch ( Exception e ) {
+            Essentials ess = (Essentials) Bukkit.getPluginManager().getPlugin("Essentials");
+            try {
+                bank = ess.getUser(p).getMoney().doubleValue();
+            } catch ( Exception ex ) {
+                ex.printStackTrace();
+                return false;
+            }
+        }
+        handler.executeCommand(
+                "update '" + dataTableName + "' set lastjoined = " + System.currentTimeMillis() + " where uuid = '" + p.getUniqueId().toString() + "';"
+                        + "update '" + dataTableName + "' set bank = " + bank + " where uuid = '" + p.getUniqueId().toString() + "';");
         return true;
     }
 }

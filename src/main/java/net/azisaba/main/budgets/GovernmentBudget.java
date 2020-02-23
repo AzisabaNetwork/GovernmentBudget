@@ -8,6 +8,7 @@ import net.azisaba.main.budgets.bank.GovernmentBank;
 import net.azisaba.main.budgets.bank.SQLDatabaseBank;
 import net.azisaba.main.budgets.command.GovernmentBudgetCommand;
 import net.azisaba.main.budgets.config.DefaultConfig;
+import net.azisaba.main.budgets.listener.UpdateSQLDataListener;
 import net.azisaba.main.budgets.sql.SQLHandler;
 import net.azisaba.main.budgets.sql.TaxDataController;
 import net.azisaba.main.budgets.tax.ExecuteTaxCollectTaskRunnable;
@@ -29,6 +30,9 @@ public class GovernmentBudget extends JavaPlugin {
     @Getter
     private static Economy economy;
 
+    @Getter
+    private boolean enableUpdatePlayerData = true;
+
     @Override
     public void onEnable() {
         defaultConfig = new DefaultConfig(this);
@@ -46,6 +50,8 @@ public class GovernmentBudget extends JavaPlugin {
         ExecuteTaxCollectTaskRunnable.initialize(this);
         taxDataController = new TaxDataController(this).init();
 
+        Bukkit.getPluginManager().registerEvents(new UpdateSQLDataListener(this), this);
+
         Bukkit.getPluginCommand("governmentbudget").setExecutor(new GovernmentBudgetCommand(this));
 
         Bukkit.getLogger().info(getName() + " enabled.");
@@ -53,6 +59,12 @@ public class GovernmentBudget extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if ( Bukkit.getOnlinePlayers().size() > 0 ) {
+            Bukkit.getOnlinePlayers().forEach(p -> {
+                taxDataController.updatePlayerData(p);
+            });
+        }
+        enableUpdatePlayerData = false;
         if ( bank != null ) {
             bank.onDisable();
         }
