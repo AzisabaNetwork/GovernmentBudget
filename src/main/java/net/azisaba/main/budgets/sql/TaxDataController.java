@@ -4,8 +4,10 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.earth2me.essentials.User;
 
@@ -86,17 +88,16 @@ public class TaxDataController {
         List<MonthlyTaxInfo> taxInfoList = new ArrayList<>();
 
         try {
-            for ( int stage = 1; stage < 5; stage++ ) {
+            for ( int stage = 1; stage <= 5; stage++ ) {
                 long limit = System.currentTimeMillis() - monthInMilli * stage;
 
-                ResultSet set = handler.executeQuery("select uuid, bank, stage from '" + dataTableName + "' where lastjoined < " + limit + " and stage < " + (stage + 1));
+                ResultSet set = handler.executeQuery("select uuid, bank, stage from '" + dataTableName + "' where lastjoined < " + limit + " and stage < " + stage);
 
                 while ( set.next() ) {
                     UUID uuid = UUID.fromString(set.getString("uuid"));
                     BigDecimal value = BigDecimal.valueOf(set.getDouble("bank"));
-                    int currentStage = set.getInt("stage");
 
-                    taxInfoList.add(new MonthlyTaxInfo(uuid, value, currentStage));
+                    taxInfoList.add(new MonthlyTaxInfo(uuid, value, stage - 1));
                 }
             }
 
@@ -106,5 +107,27 @@ public class TaxDataController {
         }
 
         return null;
+    }
+
+    public boolean incrementStage(List<UUID> uuidList) {
+        List<UUID> noDuplicate = new ArrayList<UUID>(new HashSet<>(uuidList));
+
+        while ( uuidList.size() > 0 ) {
+            StringBuilder builder = new StringBuilder("update player_and_bank_data set stage = (stage + 1) where uuid in (");
+
+            List<String> uuidStrList = uuidList.stream()
+                    .map(uuid -> "'" + uuid.toString() + "'")
+                    .collect(Collectors.toList());
+            builder.append(String.join(", ", uuidStrList)).append(")");
+            handler.executeCommand(builder.toString());
+
+            noDuplicate.forEach(uuid -> {
+                if ( uuidList.contains(uuid) ) {
+                    uuidList.remove(uuid);
+                }
+            });
+        }
+
+        return true;
     }
 }

@@ -15,6 +15,6 @@ public class MonthlyTaxInfo {
     private final int currentStage;
 
     public BigDecimal getSubtractMoney() {
-        return lastBank.divide(BigDecimal.valueOf(20));
+        return lastBank.divide(BigDecimal.valueOf(5));
     }
 }
