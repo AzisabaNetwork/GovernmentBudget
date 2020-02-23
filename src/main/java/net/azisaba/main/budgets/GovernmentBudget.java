@@ -47,8 +47,10 @@ public class GovernmentBudget extends JavaPlugin {
         }
 
         setupEconomy();
-        ExecuteTaxCollectTaskRunnable.initialize(this);
         taxDataController = new TaxDataController(this).init();
+
+        ExecuteTaxCollectTaskRunnable.initialize(this);
+        new ExecuteTaxCollectTaskRunnable().runTask(this);
 
         Bukkit.getPluginManager().registerEvents(new UpdateSQLDataListener(this), this);
 

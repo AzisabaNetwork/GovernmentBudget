@@ -44,10 +44,6 @@ public class ExecuteTaxCollectTaskRunnable extends BukkitRunnable {
         task = new ExecuteTaxCollectTaskRunnable().runTaskLater(plugin, nextTick);
     }
 
-    public void collectTax() {
-
-    }
-
     private long nextExecuteTime() {
         Calendar cal = Calendar.getInstance();
         int nextFor = Calendar.SATURDAY - cal.get(Calendar.DAY_OF_WEEK);
