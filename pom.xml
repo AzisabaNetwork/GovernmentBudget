@@ -3,7 +3,7 @@
 
   <groupId>net.azisaba</groupId>
   <artifactId>GovernmentBudget</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 
   <name>${project.artifactId}</name>
   <description>Collect tax and manage government budget plugin.</description>
