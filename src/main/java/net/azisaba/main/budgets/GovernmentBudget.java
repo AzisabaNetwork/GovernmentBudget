@@ -1,11 +1,13 @@
 package net.azisaba.main.budgets;
 
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.azisaba.main.budgets.bank.GovernmentBank;
-import net.azisaba.main.budgets.bank.SQLDatabaseBank;
+import net.azisaba.main.budgets.bank.PlayerAccountBank;
 import net.azisaba.main.budgets.command.GovernmentBudgetCommand;
 import net.azisaba.main.budgets.config.DefaultConfig;
 import net.azisaba.main.budgets.listener.UpdateSQLDataListener;
@@ -38,15 +40,17 @@ public class GovernmentBudget extends JavaPlugin {
         defaultConfig = new DefaultConfig(this);
         defaultConfig.loadConfig();
 
+        setupEconomy();
+
         if ( defaultConfig.isDontUsePlayerAccount() ) {
-            bank = new SQLDatabaseBank(this).load();
+            // bank = new SQLDatabaseBank(this).load(); // SQL Bank
+            bank = new PlayerAccountBank(this, UUID.fromString("58becc44-c5b7-420f-8800-15ba88820973"), economy).load(); // ledlaggazi's account
         } else {
-            getLogger().warning("現在SQL以外は未対応です！ Pluginを無効化しています...");
-            Bukkit.getPluginManager().enablePlugin(this);
+            getLogger().warning("予算の読み込みに失敗しました。Pluginを無効化しています...");
+            Bukkit.getPluginManager().disablePlugin(this);
             return;
         }
 
-        setupEconomy();
         taxDataController = new TaxDataController(this).init();
 
         ExecuteTaxCollectTaskRunnable.initialize(this);
