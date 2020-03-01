@@ -26,7 +26,7 @@ public class SQLHandler {
     @Getter(value = AccessLevel.PROTECTED)
     private boolean initialized = false;
 
-    protected void init() {
+    public void init() {
         // ドライバの登録
         registerDriver();
         // ファイルがなかった場合にファイルを作成

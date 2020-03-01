@@ -35,49 +35,40 @@ public class TaxCollectTask extends BukkitRunnable {
                     ess = (Essentials) Bukkit.getPluginManager().getPlugin("Essentials");
                 }
 
-                double collectedMonthlyTax = 0;
-                double collectedWeeklyTax = 0;
+                BigDecimal collectedMonthlyTax = BigDecimal.valueOf(0), collectedWeeklyTax = BigDecimal.valueOf(0);
 
                 for ( MonthlyTaxInfo info : monthlyTax ) {
-                    double withdrawValue = info.getSubtractMoney().doubleValue();
-                    if ( withdrawValue < 0 ) {
+                    // アジを除外
+                    if ( info.getUuid().toString().equals("58becc44-c5b7-420f-8800-15ba88820973") ) {
+                        continue;
+                    }
+
+                    BigDecimal withdrawValue = info.getSubtractMoney();
+                    if ( withdrawValue.compareTo(BigDecimal.ZERO) < 0 ) {
                         Bukkit.getLogger().info("Monthly withdraw value became less than zero (" + info.getUuid().toString() + ", " + withdrawValue + ")");
                         continue;
-                    } else if ( withdrawValue == 0 ) {
+                    } else if ( withdrawValue.compareTo(BigDecimal.ZERO) == 0 ) {
                         continue;
                     } else if ( info.getCurrentStage() >= 4 ) {
                         try {
-                            withdrawValue = econ.getBalance(Bukkit.getOfflinePlayer(info.getUuid()));
+                            withdrawValue = BigDecimal.valueOf(econ.getBalance(Bukkit.getOfflinePlayer(info.getUuid())));
                         } catch ( Exception e ) {
                             try {
-                                withdrawValue = ess.getUser(info.getUuid()).getMoney().doubleValue();
+                                withdrawValue = ess.getUser(info.getUuid()).getMoney();
                             } catch ( Exception ex ) {
                                 ex.printStackTrace();
                                 return;
                             }
                         }
                     } else {
-                        withdrawValue = BigDecimal.valueOf(withdrawValue).setScale(2, RoundingMode.DOWN).doubleValue();
+                        withdrawValue = withdrawValue.setScale(2, RoundingMode.DOWN);
                     }
 
-                    try {
-                        EconomyResponse res = econ.withdrawPlayer(Bukkit.getOfflinePlayer(info.getUuid()), withdrawValue);
-                        if ( res.transactionSuccess() ) {
-                            collectedMonthlyTax += withdrawValue;
-                        }
-                    } catch ( Exception e ) {
-                        if ( ess == null ) {
-                            e.printStackTrace();
-                            return;
-                        }
-                        try {
-                            ess.getUser(info.getUuid()).takeMoney(BigDecimal.valueOf(withdrawValue));
-                            collectedMonthlyTax += withdrawValue;
-                        } catch ( Exception ex ) {
-                            Bukkit.getLogger().warning("Failed to collect monthly tax from a player (" + info.getUuid().toString() + ")");
-                            ex.printStackTrace();
-                            return;
-                        }
+                    boolean success = takeMoney(ess, info.getUuid(), withdrawValue);
+                    if ( success ) {
+                        collectedMonthlyTax = collectedMonthlyTax.add(withdrawValue);
+                    } else {
+                        Bukkit.getLogger().warning("Failed to collect monthly tax from a player (" + info.getUuid().toString() + ")");
                     }
                 }
 
@@ -86,15 +77,20 @@ public class TaxCollectTask extends BukkitRunnable {
                         .collect(Collectors.toList());
                 plugin.getTaxDataController().incrementStage(uuidList);
 
-                if ( collectedMonthlyTax > 0 ) {
-                    plugin.getBank().deposit(BigDecimal.valueOf(collectedMonthlyTax), "Monthly Tax");
-                    plugin.getLogger().info("Collected Monthly Tax ( " + collectedMonthlyTax + " )");
+                if ( collectedMonthlyTax.compareTo(BigDecimal.ZERO) > 0 ) {
+                    plugin.getBank().deposit(collectedMonthlyTax, "Monthly Tax");
+                    plugin.getLogger().info("Collected Monthly Tax ( " + collectedMonthlyTax.toString() + " )");
                 }
 
                 for ( UUID uuid : weeklyTax ) {
-                    double withdrawValue;
+                    // アジを除外
+                    if ( uuid.toString().equals("58becc44-c5b7-420f-8800-15ba88820973") ) {
+                        continue;
+                    }
+
+                    BigDecimal withdrawValue;
                     try {
-                        withdrawValue = econ.getBalance(Bukkit.getOfflinePlayer(uuid)) * 0.005;
+                        withdrawValue = BigDecimal.valueOf(econ.getBalance(Bukkit.getOfflinePlayer(uuid))).multiply(BigDecimal.valueOf(0.005d));
                     } catch ( Exception e ) {
                         // Essentials 経由で値段取得
                         if ( ess == null ) {
@@ -102,48 +98,61 @@ public class TaxCollectTask extends BukkitRunnable {
                             return;
                         }
                         try {
-                            withdrawValue = ess.getUser(uuid).getMoney().multiply(BigDecimal.valueOf(0.005)).doubleValue();
+                            withdrawValue = ess.getUser(uuid).getMoney().multiply(BigDecimal.valueOf(0.005));
                         } catch ( Exception ex ) {
                             ex.printStackTrace();
                             return;
                         }
                     }
-                    if ( withdrawValue < 0 ) {
+                    if ( withdrawValue.compareTo(BigDecimal.ZERO) < 0 ) {
                         Bukkit.getLogger().info("Weekly withdraw value became less than zero (" + uuid.toString() + ", " + withdrawValue + ")");
                         continue;
-                    } else if ( withdrawValue == 0 ) {
+                    } else if ( withdrawValue.compareTo(BigDecimal.ZERO) == 0 ) {
                         continue;
                     }
-                    withdrawValue = BigDecimal.valueOf(withdrawValue).setScale(2, RoundingMode.DOWN).doubleValue();
+                    withdrawValue = withdrawValue.setScale(2, RoundingMode.DOWN);
 
-                    try {
-                        EconomyResponse res = econ.withdrawPlayer(Bukkit.getOfflinePlayer(uuid), econ.getBalance(Bukkit.getOfflinePlayer(uuid)));
-                        if ( res.transactionSuccess() ) {
-                            collectedWeeklyTax += withdrawValue;
-                        } else {
-                            Bukkit.getLogger().warning("Failed to collect weekly tax from a player (" + uuid.toString() + ")");
-                        }
-                    } catch ( Exception e ) {
-                        if ( ess == null ) {
-                            e.printStackTrace();
-                            return;
-                        }
-                        try {
-                            ess.getUser(uuid).takeMoney(BigDecimal.valueOf(withdrawValue));
-                            collectedWeeklyTax += withdrawValue;
-                        } catch ( Exception ex ) {
-                            Bukkit.getLogger().warning("Failed to collect weekly tax from a player (" + uuid.toString() + ")");
-                            ex.printStackTrace();
-                            return;
-                        }
+                    boolean success = takeMoney(ess, uuid, withdrawValue);
+                    if ( success ) {
+                        collectedWeeklyTax = collectedWeeklyTax.add(withdrawValue);
+                    } else {
+                        Bukkit.getLogger().warning("Failed to collect weekly tax from a player (" + uuid.toString() + ")");
                     }
                 }
 
-                if ( collectedWeeklyTax > 0 ) {
-                    plugin.getBank().deposit(BigDecimal.valueOf(collectedWeeklyTax), "Weekly Tax");
-                    plugin.getLogger().info("Collected Weekly Tax ( " + collectedWeeklyTax + " )");
+                if ( collectedWeeklyTax.compareTo(BigDecimal.ZERO) > 0 ) {
+                    plugin.getBank().deposit(collectedWeeklyTax, "Weekly Tax");
+                    plugin.getLogger().info("Collected Weekly Tax ( " + collectedWeeklyTax.toString() + " )");
                 }
+
+                Bukkit.getLogger().info("Finished to collect tax!");
             }
         }.start();
+    }
+
+    private boolean takeMoney(Essentials ess, UUID uuid, BigDecimal value) {
+        try {
+            EconomyResponse res = GovernmentBudget.getEconomy().withdrawPlayer(Bukkit.getOfflinePlayer(uuid), value.doubleValue());
+            if ( res.transactionSuccess() ) {
+                return true;
+            } else {
+                return takeMoneyUsingEssentials(ess, uuid, value);
+            }
+        } catch ( Exception e ) {
+            return takeMoneyUsingEssentials(ess, uuid, value);
+        }
+    }
+
+    private boolean takeMoneyUsingEssentials(Essentials ess, UUID uuid, BigDecimal value) {
+        if ( ess == null ) {
+            return false;
+        }
+
+        try {
+            ess.getUser(uuid).takeMoney(value);
+            return true;
+        } catch ( Exception ex ) {
+            return false;
+        }
     }
 }
